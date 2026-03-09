@@ -22,17 +22,12 @@
             background-color: var(--bg-dark);
             color: var(--txt-main);
             margin: 0;
-            overflow: hidden; /* Prevent scrolling for a full-screen feel */
+            overflow: hidden; 
             touch-action: manipulation;
         }
 
         /* --- Global Styles --- */
-        button {
-            border: none;
-            cursor: pointer;
-            transition: opacity 0.2s;
-            font-size: 16px;
-        }
+        button { border: none; cursor: pointer; transition: opacity 0.2s; font-size: 16px; }
         button:active { opacity: 0.8; }
 
         /* --- Main Menu --- */
@@ -45,11 +40,7 @@
             padding: 20px;
         }
 
-        h1 {
-            color: var(--accent);
-            font-size: 28px;
-            margin-bottom: 30px;
-        }
+        h1 { color: var(--accent); font-size: 28px; margin-bottom: 30px; }
 
         .rotation-buttons {
             display: flex;
@@ -74,7 +65,7 @@
 
         /* --- Flashcard Area --- */
         #quiz-view {
-            display: none; /* Hidden by default */
+            display: none; 
             flex-direction: column;
             height: 100vh;
             background-color: var(--bg-panel);
@@ -98,10 +89,10 @@
             flex-direction: column;
             align-items: center;
             padding: 20px;
-            cursor: pointer; /* Whole area is clickable */
+            cursor: pointer; 
         }
 
-        /* Visual Map - the "U" shape */
+        /* Visual Map */
         #map {
             position: relative;
             width: 100%;
@@ -121,9 +112,7 @@
             border: 1px solid #fff;
             background-color: #000;
         }
-        /* Positions: CE, CW, SE, SW, NE, NW, C, N, S based on 9 visual grid slots. C is default. */
-        /* Columns: Left (NW/CW/SW), Center (C), Right (NE/CE/SE) */
-        /* Rows: Top (N, NW, NE), Mid (C, CW, CE), Bottom (S, SW, SE) */
+        
         #p-nw { top: 20px; left: 20px; }
         #p-ne { top: 20px; right: 20px; }
         #p-cw { top: 50%; transform: translateY(-50%); left: 20px; }
@@ -132,7 +121,6 @@
         #p-se { bottom: 20px; right: 20px; }
         #p-c  { top: 50%; left: 50%; transform: translate(-50%, -50%); border-style: dotted; opacity: 0.5; }
 
-        /* Zulrah icon on the map */
         #zulrah-pos {
             position: absolute;
             width: 36px;
@@ -163,10 +151,9 @@
         #info-title { font-weight: bold; font-size: 20px; }
 
         .attacks-count { color: var(--txt-muted); font-size: 14px; margin-top: 5px; }
-
         .hint-text { color: var(--txt-muted); font-size: 12px; margin-top: 20px; opacity: 0.7; }
 
-        /* Key Popup (Simple modal) */
+        /* Key Popup */
         #key-modal {
             display: none;
             position: fixed;
@@ -193,8 +180,7 @@
             <button class="rot-btn" onclick="startRotation('MAGMA B')">2. MAGMA B (Melee)</button>
             <button class="rot-btn" onclick="startRotation('SERP')">3. SERP (Range)</button>
             <button class="rot-btn" onclick="startRotation('TANZ')">4. TANZ (Mage)</button>
-        }
-        <button class="btn-key" onclick="toggleKey()">View Key & Legend</button>
+        </div> <button class="btn-key" onclick="toggleKey()">View Key & Legend</button>
     </div>
 
     <div id="quiz-view">
@@ -204,7 +190,8 @@
                 <span class="rot-name">Rotation Name</span><br>
                 <span class="step-count">Step 1/11</span>
             </div>
-            <div>&nbsp;</div> </div>
+            <div>&nbsp;</div> 
+        </div>
 
         <div id="card-body" onclick="nextStep()">
             <div id="map">
@@ -241,9 +228,6 @@
     </div>
 
     <script>
-        // --- The Data - Digital recreation of image_0.png ---
-        // positions: N, C, S, NE, NW, CE, CW, SE, SW
-        // Special types: "jad", "melee_stand", "reset"
         const rotations = {
             'MAGMA A': [
                 { form: 'range', pos: 'C', attacks: 0, text: 'Initial spawn.' },
@@ -302,7 +286,6 @@
             ]
         };
 
-        // UI State Variables
         let currentRotationName = null;
         let currentStepIndex = 0;
 
@@ -318,37 +301,33 @@
         const infoText = document.getElementById('info-text');
         const attacksNum = document.getElementById('attacks-num');
 
-        // Positioning Mapping (Mapping logic from "U" shape in chart to visual grid)
-        // [top, left] positions on the 300x250 map
         const positions = {
             'N': ['20px', '50%'],
             'C': ['50%', '50%'],
-            'S': ['auto', '50%', '20px'], // bottom defined
-            'NE': ['20px', 'auto', 'auto', '20px'], // top right
-            'NW': ['20px', '20px'], // top left
-            'CE': ['50%', 'auto', 'auto', '20px'], // center right
-            'CW': ['50%', '20px'], // center left
-            'SE': ['auto', 'auto', '20px', '20px'], // bottom right
-            'SW': ['auto', '20px', '20px'] // bottom left
+            'S': ['auto', '50%', '20px'], 
+            'NE': ['20px', 'auto', 'auto', '20px'], 
+            'NW': ['20px', '20px'], 
+            'CE': ['50%', 'auto', 'auto', '20px'], 
+            'CW': ['50%', '20px'], 
+            'SE': ['auto', 'auto', '20px', '20px'], 
+            'SW': ['auto', '20px', '20px'] 
         };
 
         const formIcons = {
             'range': '<i class="fas fa-bullseye" style="color: var(--color-range);"></i>',
             'mage': '<i class="fas fa-magic" style="color: var(--color-mage);"></i>',
             'melee': '<i class="fas fa-gavel" style="color: var(--color-melee);"></i>',
-            'jad': '<i class="fas fa-angry" style="color: #ffb300;"></i>' // Jad alert
+            'jad': '<i class="fas fa-angry" style="color: #ffb300;"></i>'
         };
 
-        // Reset positions for all absolute corners
         function resetPositionStyles() {
             zulrahPosMarker.style.top = 'auto';
             zulrahPosMarker.style.left = 'auto';
             zulrahPosMarker.style.bottom = 'auto';
             zulrahPosMarker.style.right = 'auto';
-            zulrahPosMarker.style.transform = 'translate(0, 0)'; // reset translations
+            zulrahPosMarker.style.transform = 'translate(0, 0)'; 
         }
 
-        // --- View Transitions ---
         function showMainMenu() {
             quizView.style.display = 'none';
             mainMenuView.style.display = 'flex';
@@ -363,39 +342,36 @@
             populateCard();
         }
 
-        // Update the card with current step data
         function populateCard() {
             const dataArr = rotations[currentRotationName];
             const currentStep = dataArr[currentStepIndex];
 
-            // Header update
             headerName.innerText = currentRotationName;
             headerStep.innerText = `Step ${currentStepIndex + 1}/${dataArr.length}`;
 
-            // Map update (visually move Zulrah)
             resetPositionStyles();
             const posData = positions[currentStep.pos];
+            
             if (currentStep.pos === 'C') {
                 zulrahPosMarker.style.top = posData[0];
                 zulrahPosMarker.style.left = posData[1];
-                zulrahPosMarker.style.transform = 'translate(-50%, -50%)'; // special center
+                zulrahPosMarker.style.transform = 'translate(-50%, -50%)';
             } else if (currentStep.pos === 'N' || currentStep.pos === 'S') {
                  zulrahPosMarker.style.left = '50%';
                  zulrahPosMarker.style.transform = 'translateX(-50%)';
                  if(currentStep.pos === 'N') zulrahPosMarker.style.top = posData[0];
                  if(currentStep.pos === 'S') zulrahPosMarker.style.bottom = posData[2];
             } else {
-                 zulrahPosMarker.style.top = posData[0] !== 'auto' ? posData[0] : 'auto';
-                 zulrahPosMarker.style.left = posData[1] !== 'auto' ? posData[1] : 'auto';
-                 zulrahPosMarker.style.bottom = posData[2] !== 'auto' ? posData[2] : 'auto';
-                 zulrahPosMarker.style.right = posData[3] !== 'auto' ? posData[3] : 'auto';
+                 // FIX: Added bulletproof fallback for Safari styles
+                 zulrahPosMarker.style.top = posData[0] || 'auto';
+                 zulrahPosMarker.style.left = posData[1] || 'auto';
+                 zulrahPosMarker.style.bottom = posData[2] || 'auto';
+                 zulrahPosMarker.style.right = posData[3] || 'auto';
             }
 
-            // Info Panel update
             attacksNum.innerText = currentStep.attacks;
             infoText.innerText = currentStep.text;
 
-            // Form specifics (color and icons)
             let currentFormKey = currentStep.form;
             let currentTitle = currentStep.form.charAt(0).toUpperCase() + currentStep.form.slice(1) + ' Form';
             let currentAccentColor = `var(--color-${currentStep.form})`;
@@ -407,7 +383,7 @@
             }
 
             if (currentStep.form === 'range' && currentStep.type === 'reset') {
-                 currentAccentColor = '#fff'; // neutral for reset
+                 currentAccentColor = '#fff'; 
             }
 
             infoIcon.innerHTML = formIcons[currentFormKey];
@@ -416,11 +392,10 @@
             infoPanel.style.borderColor = currentAccentColor;
         }
 
-        // Logic to advance or reset
         function nextStep() {
             currentStepIndex++;
             if (currentStepIndex >= rotations[currentRotationName].length) {
-                currentStepIndex = 0; // Reset rotation automatically
+                currentStepIndex = 0; 
             }
             populateCard();
         }
