@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OSRS Zulrah Memory Trainer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --bg-panel: #1e1e1e;
+            --txt-main: #ffffff;
+            --txt-muted: #b0b0b0;
+            --accent: #ffb74d; /* OSRS orange */
+            --color-range: #43a047; /* Green */
+            --color-mage: #1e88e5; /* Blue */
+            --color-melee: #e53935; /* Red */
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--txt-main);
+            margin: 0;
+            overflow: hidden; /* Prevent scrolling for a full-screen feel */
+            touch-action: manipulation;
+        }
+
+        /* --- Global Styles --- */
+        button {
+            border: none;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            font-size: 16px;
+        }
+        button:active { opacity: 0.8; }
+
+        /* --- Main Menu --- */
+        #main-menu {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 20px;
+        }
+
+        h1 {
+            color: var(--accent);
+            font-size: 28px;
+            margin-bottom: 30px;
+        }
+
+        .rotation-buttons {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 320px;
+            gap: 15px;
+        }
+
+        .rot-btn {
+            background-color: var(--bg-panel);
+            color: var(--txt-main);
+            padding: 20px;
+            border-radius: 12px;
+            font-weight: bold;
+            text-align: left;
+            border: 2px solid transparent;
+        }
+        .rot-btn:hover { border-color: var(--accent); }
+
+        .btn-key { margin-top: 40px; background-color: var(--bg-dark); color: var(--txt-muted); text-decoration: underline; border: none; font-size: 14px; }
+
+        /* --- Flashcard Area --- */
+        #quiz-view {
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            height: 100vh;
+            background-color: var(--bg-panel);
+        }
+
+        #quiz-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 20px;
+            border-bottom: 1px solid #333;
+            color: var(--txt-main);
+        }
+        #quiz-header .back-btn { background: none; color: var(--txt-main); font-size: 20px; }
+        #quiz-header .rot-name { font-weight: bold; }
+        #quiz-header .step-count { font-weight: lighter; font-size: 14px; opacity: 0.8; }
+
+        #card-body {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            cursor: pointer; /* Whole area is clickable */
+        }
+
+        /* Visual Map - the "U" shape */
+        #map {
+            position: relative;
+            width: 100%;
+            max-width: 300px;
+            height: 250px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #333;
+        }
+        
+        .pillar {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 1px solid #fff;
+            background-color: #000;
+        }
+        /* Positions: CE, CW, SE, SW, NE, NW, C, N, S based on 9 visual grid slots. C is default. */
+        /* Columns: Left (NW/CW/SW), Center (C), Right (NE/CE/SE) */
+        /* Rows: Top (N, NW, NE), Mid (C, CW, CE), Bottom (S, SW, SE) */
+        #p-nw { top: 20px; left: 20px; }
+        #p-ne { top: 20px; right: 20px; }
+        #p-cw { top: 50%; transform: translateY(-50%); left: 20px; }
+        #p-ce { top: 50%; transform: translateY(-50%); right: 20px; }
+        #p-sw { bottom: 20px; left: 20px; }
+        #p-se { bottom: 20px; right: 20px; }
+        #p-c  { top: 50%; left: 50%; transform: translate(-50%, -50%); border-style: dotted; opacity: 0.5; }
+
+        /* Zulrah icon on the map */
+        #zulrah-pos {
+            position: absolute;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #fff;
+            z-index: 2;
+            transition: all 0.3s ease;
+        }
+
+        /* Phase Data Area */
+        #info-panel {
+            width: 100%;
+            max-width: 300px;
+            border-radius: 12px;
+            border: 2px solid transparent;
+            padding: 20px;
+            text-align: center;
+        }
+
+        #info-header { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
+        #info-icon { font-size: 32px; }
+        #info-title { font-weight: bold; font-size: 20px; }
+
+        .attacks-count { color: var(--txt-muted); font-size: 14px; margin-top: 5px; }
+
+        .hint-text { color: var(--txt-muted); font-size: 12px; margin-top: 20px; opacity: 0.7; }
+
+        /* Key Popup (Simple modal) */
+        #key-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.85);
+            z-index: 10;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        #key-modal .close-btn { position: absolute; top: 15px; right: 20px; background: none; color: var(--txt-main); font-size: 20px; }
+        .key-content { color: var(--txt-muted); text-align: left; max-width: 320px; margin: 40px auto; }
+        .key-content h2 { color: var(--txt-main); margin-bottom: 20px; }
+        .key-item { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; font-size: 14px; }
+        .key-marker { width: 14px; height: 14px; border-radius: 50%; }
+
+    </style>
+</head>
+<body>
+
+    <div id="main-menu">
+        <h1>Zulrah Trainer</h1>
+        <div class="rotation-buttons">
+            <button class="rot-btn" onclick="startRotation('MAGMA A')">1. MAGMA A (Melee)</button>
+            <button class="rot-btn" onclick="startRotation('MAGMA B')">2. MAGMA B (Melee)</button>
+            <button class="rot-btn" onclick="startRotation('SERP')">3. SERP (Range)</button>
+            <button class="rot-btn" onclick="startRotation('TANZ')">4. TANZ (Mage)</button>
+        }
+        <button class="btn-key" onclick="toggleKey()">View Key & Legend</button>
+    </div>
+
+    <div id="quiz-view">
+        <div id="quiz-header">
+            <button class="back-btn" onclick="showMainMenu()"><i class="fas fa-chevron-left"></i></button>
+            <div class="header-center">
+                <span class="rot-name">Rotation Name</span><br>
+                <span class="step-count">Step 1/11</span>
+            </div>
+            <div>&nbsp;</div> </div>
+
+        <div id="card-body" onclick="nextStep()">
+            <div id="map">
+                <div class="pillar" id="p-nw"></div> <div class="pillar" id="p-ne"></div>
+                <div class="pillar" id="p-cw"></div> <div class="pillar" id="p-ce"></div>
+                <div class="pillar" id="p-sw"></div> <div class="pillar" id="p-se"></div>
+                <div class="pillar" id="p-c"></div>
+                <div id="zulrah-pos"><i class="fas fa-dragon"></i></div>
+            </div>
+
+            <div id="info-panel">
+                <div id="info-header">
+                    <span id="info-icon"><i class="fas fa-magic"></i></span>
+                    <span id="info-title">Mage Form</span>
+                </div>
+                <p id="info-text">Pray Mage, Run East.</p>
+                <p class="attacks-count"><i class="fas fa-bolt"></i> <span id="attacks-num">0</span> Attacks</p>
+                <p class="hint-text">(Click anywhere on card to advance)</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="key-modal">
+        <button class="close-btn" onclick="toggleKey()"><i class="fas fa-times"></i></button>
+        <div class="key-content">
+            <h2>Legend</h2>
+            <div class="key-item"><div class="key-marker" style="background-color: var(--color-range);"></div> Range form</div>
+            <div class="key-item"><div class="key-marker" style="background-color: var(--color-mage);"></div> Mage form</div>
+            <div class="key-item"><div class="key-marker" style="background-color: var(--color-melee);"></div> Melee form</div>
+            <div class="key-item"><div class="pillar"></div> Visual Pillars</div>
+            <div class="key-item"><div class="pillar" style="border-style: dotted;"></div> Center position</div>
+            <p style="font-size: 12px; margin-top: 20px;">For mobile sanity, I have recreated the positions visually. If Zulrah moves from the top-left 'NW' to the far right 'E', I will show a visual map update and direct text instructions.</p>
+        </div>
+    </div>
+
+    <script>
+        // --- The Data - Digital recreation of image_0.png ---
+        // positions: N, C, S, NE, NW, CE, CW, SE, SW
+        // Special types: "jad", "melee_stand", "reset"
+        const rotations = {
+            'MAGMA A': [
+                { form: 'range', pos: 'C', attacks: 0, text: 'Initial spawn.' },
+                { form: 'melee', pos: 'C', attacks: 2, text: 'No prayer. Run immediately after attacks start.' },
+                { form: 'mage', pos: 'C', attacks: 4, text: 'Pray Mage. Run to pillars.' },
+                { form: 'range', pos: 'S', attacks: 5, text: 'Pray Range.' },
+                { form: 'melee', pos: 'C', attacks: 2, text: 'Run near the West pillar.' },
+                { form: 'range', pos: 'CE', attacks: 5, text: 'Pray Range, Run to East.' },
+                { form: 'mage', pos: 'S', attacks: 0, text: 'Safe spot, no prayer.' },
+                { form: 'range', pos: 'C', attacks: 5, text: 'Pray Range, Run West.' },
+                { form: 'jad', type: 'jad', pos: 'CE', attacks: 10, text: 'JAD PHASE! Alternate Range > Mage.' },
+                { form: 'melee', pos: 'C', attacks: 2, text: 'Run to safety.' },
+                { form: 'range', type: 'reset', pos: 'S', attacks: 5, text: 'Pray Range. Back to start next.' }
+            ],
+            'MAGMA B': [
+                { form: 'range', pos: 'C', attacks: 0, text: 'Initial spawn.' },
+                { form: 'melee', pos: 'C', attacks: 2, text: 'Run immediately after attacks start.' },
+                { form: 'mage', pos: 'C', attacks: 4, text: 'Pray Mage. Run to pillars.' },
+                { form: 'mage', pos: 'S', attacks: 0, text: 'Safe spot, no prayer.' },
+                { form: 'range', pos: 'S', attacks: 5, text: 'Pray Range.' },
+                { form: 'melee', pos: 'C', attacks: 2, text: 'Run near the East pillar.' },
+                { form: 'range', pos: 'CE', attacks: 5, text: 'Pray Range, Run East.' },
+                { form: 'mage', pos: 'S', attacks: 5, text: 'Pray Mage, Safe spot.' },
+                { form: 'jad', type: 'jad', pos: 'CW', attacks: 10, text: 'JAD PHASE! Alternate Range > Mage.' },
+                { form: 'melee', pos: 'C', attacks: 2, text: 'Run to safety.' },
+                { form: 'range', type: 'reset', pos: 'S', attacks: 5, text: 'Pray Range. Back to start next.' }
+            ],
+            'SERP': [
+                { form: 'range', pos: 'C', attacks: 0, text: 'Initial spawn.' },
+                { form: 'range', pos: 'NE', attacks: 5, text: 'Pray Range, stand West.' },
+                { form: 'melee', pos: 'CE', attacks: 2, text: 'Run immediately after each attack starts!' },
+                { form: 'range', pos: 'NW', attacks: 5, text: 'Pray Range, stand East.' },
+                { form: 'mage', pos: 'S', attacks: 5, text: 'Pray Mage.' },
+                { form: 'range', pos: 'CW', attacks: 5, text: 'Pray Range.' },
+                { form: 'range', pos: 'S', attacks: 0, text: 'Safe spot.' },
+                { form: 'mage', pos: 'C', attacks: 5, text: 'Pray Mage.' },
+                { form: 'range', pos: 'NE', attacks: 5, text: 'Pray Range, stand West.' },
+                { form: 'jad', type: 'jad', pos: 'NW', attacks: 10, text: 'JAD PHASE! Alternate Mage > Range.' },
+                { form: 'range', type: 'reset', pos: 'S', attacks: 0, text: 'Pray Range.' },
+                { form: 'range', type: 'reset', pos: 'C', attacks: 5, text: 'Back to start.' }
+            ],
+            'TANZ': [
+                { form: 'range', pos: 'C', attacks: 0, text: 'Initial spawn.' },
+                { form: 'mage', pos: 'NW', attacks: 6, text: 'Pray Mage.' },
+                { form: 'range', pos: 'C', attacks: 4, text: 'Pray Range.' },
+                { form: 'mage', pos: 'CE', attacks: 4, text: 'Pray Mage, run East.' },
+                { form: 'range', pos: 'C', attacks: 0, text: 'Safe spot.' },
+                { form: 'mage', pos: 'CE', attacks: 4, text: 'Pray Mage.' },
+                { form: 'range', pos: 'S', attacks: 0, text: 'Pray Range.' },
+                { form: 'range', pos: 'C', attacks: 5, text: 'Pray Range.' },
+                { form: 'range', pos: 'NW', attacks: 5, text: 'Pray Range.' },
+                { form: 'mage', pos: 'S', attacks: 4, text: 'Pray Mage.' },
+                { form: 'jad', type: 'jad', pos: 'NE', attacks: 8, text: 'JAD PHASE! Alternate Range > Mage.' },
+                { form: 'mage', type: 'reset', pos: 'S', attacks: 0, text: 'Pray Mage.' },
+                { form: 'range', type: 'reset', pos: 'C', attacks: 5, text: 'Back to start next.' }
+            ]
+        };
+
+        // UI State Variables
+        let currentRotationName = null;
+        let currentStepIndex = 0;
+
+        const mainMenuView = document.getElementById('main-menu');
+        const quizView = document.getElementById('quiz-view');
+        const keyModal = document.getElementById('key-modal');
+        const headerName = document.querySelector('.rot-name');
+        const headerStep = document.querySelector('.step-count');
+        const zulrahPosMarker = document.getElementById('zulrah-pos');
+        const infoPanel = document.getElementById('info-panel');
+        const infoIcon = document.getElementById('info-icon');
+        const infoTitle = document.getElementById('info-title');
+        const infoText = document.getElementById('info-text');
+        const attacksNum = document.getElementById('attacks-num');
+
+        // Positioning Mapping (Mapping logic from "U" shape in chart to visual grid)
+        // [top, left] positions on the 300x250 map
+        const positions = {
+            'N': ['20px', '50%'],
+            'C': ['50%', '50%'],
+            'S': ['auto', '50%', '20px'], // bottom defined
+            'NE': ['20px', 'auto', 'auto', '20px'], // top right
+            'NW': ['20px', '20px'], // top left
+            'CE': ['50%', 'auto', 'auto', '20px'], // center right
+            'CW': ['50%', '20px'], // center left
+            'SE': ['auto', 'auto', '20px', '20px'], // bottom right
+            'SW': ['auto', '20px', '20px'] // bottom left
+        };
+
+        const formIcons = {
+            'range': '<i class="fas fa-bullseye" style="color: var(--color-range);"></i>',
+            'mage': '<i class="fas fa-magic" style="color: var(--color-mage);"></i>',
+            'melee': '<i class="fas fa-gavel" style="color: var(--color-melee);"></i>',
+            'jad': '<i class="fas fa-angry" style="color: #ffb300;"></i>' // Jad alert
+        };
+
+        // Reset positions for all absolute corners
+        function resetPositionStyles() {
+            zulrahPosMarker.style.top = 'auto';
+            zulrahPosMarker.style.left = 'auto';
+            zulrahPosMarker.style.bottom = 'auto';
+            zulrahPosMarker.style.right = 'auto';
+            zulrahPosMarker.style.transform = 'translate(0, 0)'; // reset translations
+        }
+
+        // --- View Transitions ---
+        function showMainMenu() {
+            quizView.style.display = 'none';
+            mainMenuView.style.display = 'flex';
+            currentRotationName = null;
+        }
+
+        function startRotation(name) {
+            currentRotationName = name;
+            currentStepIndex = 0;
+            mainMenuView.style.display = 'none';
+            quizView.style.display = 'flex';
+            populateCard();
+        }
+
+        // Update the card with current step data
+        function populateCard() {
+            const dataArr = rotations[currentRotationName];
+            const currentStep = dataArr[currentStepIndex];
+
+            // Header update
+            headerName.innerText = currentRotationName;
+            headerStep.innerText = `Step ${currentStepIndex + 1}/${dataArr.length}`;
+
+            // Map update (visually move Zulrah)
+            resetPositionStyles();
+            const posData = positions[currentStep.pos];
+            if (currentStep.pos === 'C') {
+                zulrahPosMarker.style.top = posData[0];
+                zulrahPosMarker.style.left = posData[1];
+                zulrahPosMarker.style.transform = 'translate(-50%, -50%)'; // special center
+            } else if (currentStep.pos === 'N' || currentStep.pos === 'S') {
+                 zulrahPosMarker.style.left = '50%';
+                 zulrahPosMarker.style.transform = 'translateX(-50%)';
+                 if(currentStep.pos === 'N') zulrahPosMarker.style.top = posData[0];
+                 if(currentStep.pos === 'S') zulrahPosMarker.style.bottom = posData[2];
+            } else {
+                 zulrahPosMarker.style.top = posData[0] !== 'auto' ? posData[0] : 'auto';
+                 zulrahPosMarker.style.left = posData[1] !== 'auto' ? posData[1] : 'auto';
+                 zulrahPosMarker.style.bottom = posData[2] !== 'auto' ? posData[2] : 'auto';
+                 zulrahPosMarker.style.right = posData[3] !== 'auto' ? posData[3] : 'auto';
+            }
+
+            // Info Panel update
+            attacksNum.innerText = currentStep.attacks;
+            infoText.innerText = currentStep.text;
+
+            // Form specifics (color and icons)
+            let currentFormKey = currentStep.form;
+            let currentTitle = currentStep.form.charAt(0).toUpperCase() + currentStep.form.slice(1) + ' Form';
+            let currentAccentColor = `var(--color-${currentStep.form})`;
+
+            if (currentStep.type === 'jad') {
+                currentFormKey = 'jad';
+                currentTitle = 'JAD PHASE!';
+                currentAccentColor = '#ffb300';
+            }
+
+            if (currentStep.form === 'range' && currentStep.type === 'reset') {
+                 currentAccentColor = '#fff'; // neutral for reset
+            }
+
+            infoIcon.innerHTML = formIcons[currentFormKey];
+            infoTitle.innerText = currentTitle;
+            zulrahPosMarker.style.borderColor = currentAccentColor;
+            infoPanel.style.borderColor = currentAccentColor;
+        }
+
+        // Logic to advance or reset
+        function nextStep() {
+            currentStepIndex++;
+            if (currentStepIndex >= rotations[currentRotationName].length) {
+                currentStepIndex = 0; // Reset rotation automatically
+            }
+            populateCard();
+        }
+
+        function toggleKey() {
+            keyModal.style.display = keyModal.style.display === 'block' ? 'none' : 'block';
+        }
+    </script>
+</body>
+</html>
