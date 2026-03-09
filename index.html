@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OSRS Zulrah Memory Trainer</title>
+    <title>OSRS Zulrah Memory Trainer v3.0</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         :root {
@@ -24,11 +24,17 @@
             margin: 0;
             overflow: hidden; 
             touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent; /* Removes native mobile tap flash */
         }
 
         /* --- Global Styles --- */
-        button { border: none; cursor: pointer; transition: opacity 0.2s; font-size: 16px; }
-        button:active { opacity: 0.8; }
+        button { 
+            border: none; 
+            cursor: pointer; 
+            font-size: 16px; 
+            user-select: none; /* Prevents text selection on rapid taps */
+        }
+        button:active { opacity: 0.7; transform: scale(0.98); }
 
         /* --- Main Menu --- */
         #main-menu {
@@ -58,8 +64,13 @@
             font-weight: bold;
             text-align: left;
             border: 2px solid transparent;
+            transition: border-color 0.2s, transform 0.1s;
         }
-        .rot-btn:hover { border-color: var(--accent); }
+        
+        /* FIX: Only apply hover effects on devices with a mouse to prevent the iOS Double-Tap Bug */
+        @media (hover: hover) {
+            .rot-btn:hover { border-color: var(--accent); }
+        }
 
         .btn-key { margin-top: 40px; background-color: var(--bg-dark); color: var(--txt-muted); text-decoration: underline; border: none; font-size: 14px; }
 
@@ -79,7 +90,7 @@
             border-bottom: 1px solid #333;
             color: var(--txt-main);
         }
-        #quiz-header .back-btn { background: none; color: var(--txt-main); font-size: 20px; }
+        #quiz-header .back-btn { background: none; color: var(--txt-main); font-size: 20px; padding: 10px; }
         #quiz-header .rot-name { font-weight: bold; }
         #quiz-header .step-count { font-weight: lighter; font-size: 14px; opacity: 0.8; }
 
@@ -92,48 +103,69 @@
             cursor: pointer; 
         }
 
-        /* Visual Map */
-        #map {
+        /* Visual Map (SVG for portability and detail) */
+        #map-container {
             position: relative;
             width: 100%;
             max-width: 300px;
             height: 250px;
-            background: rgba(255,255,255,0.05);
             border-radius: 12px;
             margin-bottom: 20px;
             border: 1px solid #333;
+            overflow: hidden;
+            background-color: rgb(34, 46, 38); /* Water/Swamp */
         }
         
+        #map-svg {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0; left: 0;
+            z-index: 1;
+        }
+
         .pillar {
             position: absolute;
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
-            border: 1px solid #fff;
-            background-color: #000;
+            border: 2px solid #555;
+            background-color: #333; 
+            z-index: 3;
+            transform: translate(-50%, -50%); 
         }
         
-        #p-nw { top: 20px; left: 20px; }
-        #p-ne { top: 20px; right: 20px; }
-        #p-cw { top: 50%; transform: translateY(-50%); left: 20px; }
-        #p-ce { top: 50%; transform: translateY(-50%); right: 20px; }
-        #p-sw { bottom: 20px; left: 20px; }
-        #p-se { bottom: 20px; right: 20px; }
-        #p-c  { top: 50%; left: 50%; transform: translate(-50%, -50%); border-style: dotted; opacity: 0.5; }
+        #p-nw { top: 15%; left: 15%; }
+        #p-ne { top: 15%; left: 85%; }
+        #p-sw { top: 85%; left: 15%; }
+        #p-se { top: 85%; left: 85%; }
 
-        #zulrah-pos {
+        .map-icon {
             position: absolute;
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            border: 3px solid transparent;
             display: flex;
             align-items: center;
             justify-content: center;
+            z-index: 5;
+            transition: all 0.3s ease;
+            transform: translate(-50%, -50%); 
+        }
+
+        #zulrah-pos {
+            border: 3px solid transparent;
             font-size: 20px;
             color: #fff;
-            z-index: 2;
-            transition: all 0.3s ease;
+        }
+
+        #player-pos {
+            width: 28px; height: 28px;
+            background-color: rgba(255,255,255,0.2);
+            border: 2px solid var(--accent);
+            font-size: 16px;
+            color: var(--accent);
+            z-index: 4; 
         }
 
         /* Phase Data Area */
@@ -144,6 +176,7 @@
             border: 2px solid transparent;
             padding: 20px;
             text-align: center;
+            transition: border-color 0.3s;
         }
 
         #info-header { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
@@ -163,7 +196,7 @@
             padding: 20px;
             overflow-y: auto;
         }
-        #key-modal .close-btn { position: absolute; top: 15px; right: 20px; background: none; color: var(--txt-main); font-size: 20px; }
+        #key-modal .close-btn { position: absolute; top: 15px; right: 20px; background: none; color: var(--txt-main); font-size: 20px; padding: 10px; }
         .key-content { color: var(--txt-muted); text-align: left; max-width: 320px; margin: 40px auto; }
         .key-content h2 { color: var(--txt-main); margin-bottom: 20px; }
         .key-item { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; font-size: 14px; }
@@ -174,7 +207,7 @@
 <body>
 
     <div id="main-menu">
-        <h1>Zulrah Trainer</h1>
+        <h1>Zulrah Trainer v3.0</h1>
         <div class="rotation-buttons">
             <button class="rot-btn" onclick="startRotation('MAGMA A')">1. MAGMA A (Melee)</button>
             <button class="rot-btn" onclick="startRotation('MAGMA B')">2. MAGMA B (Melee)</button>
@@ -190,16 +223,25 @@
                 <span class="rot-name">Rotation Name</span><br>
                 <span class="step-count">Step 1/11</span>
             </div>
-            <div>&nbsp;</div> 
-        </div>
+            <div style="width: 40px;">&nbsp;</div> </div>
 
         <div id="card-body" onclick="nextStep()">
-            <div id="map">
+            <div id="map-container">
+                <svg id="map-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <defs>
+                        <clipPath id="land-clip">
+                            <path d="M 0,0 L 100,0 L 100,100 L 80,100 Q 80,80 70,70 L 30,70 Q 20,80 20,100 L 0,100 Z" />
+                        </clipPath>
+                    </defs>
+                    <rect width="100%" height="100%" fill="rgb(22, 29, 25)" style="clip-path: url(#land-clip);" />
+                    <rect width="100%" height="100%" fill="rgba(255,255,255,0.1)" />
+                </svg>
+
                 <div class="pillar" id="p-nw"></div> <div class="pillar" id="p-ne"></div>
-                <div class="pillar" id="p-cw"></div> <div class="pillar" id="p-ce"></div>
                 <div class="pillar" id="p-sw"></div> <div class="pillar" id="p-se"></div>
-                <div class="pillar" id="p-c"></div>
-                <div id="zulrah-pos"><i class="fas fa-dragon"></i></div>
+
+                <div class="map-icon" id="player-pos"><i class="fas fa-user-ninja"></i></div>
+                <div class="map-icon" id="zulrah-pos"><i class="fas fa-dragon"></i></div>
             </div>
 
             <div id="info-panel">
@@ -209,7 +251,7 @@
                 </div>
                 <p id="info-text">Pray Mage, Run East.</p>
                 <p class="attacks-count"><i class="fas fa-bolt"></i> <span id="attacks-num">0</span> Attacks</p>
-                <p class="hint-text">(Click anywhere on card to advance)</p>
+                <p class="hint-text">(Tap anywhere on card to advance)</p>
             </div>
         </div>
     </div>
@@ -221,68 +263,68 @@
             <div class="key-item"><div class="key-marker" style="background-color: var(--color-range);"></div> Range form</div>
             <div class="key-item"><div class="key-marker" style="background-color: var(--color-mage);"></div> Mage form</div>
             <div class="key-item"><div class="key-marker" style="background-color: var(--color-melee);"></div> Melee form</div>
-            <div class="key-item"><div class="pillar"></div> Visual Pillars</div>
-            <div class="key-item"><div class="pillar" style="border-style: dotted;"></div> Center position</div>
-            <p style="font-size: 12px; margin-top: 20px;">For mobile sanity, I have recreated the positions visually. If Zulrah moves from the top-left 'NW' to the far right 'E', I will show a visual map update and direct text instructions.</p>
+            <div class="key-item"><div class="key-marker" style="background-color: transparent; border: 2px solid var(--accent);"></div> Player standing spot</div>
+            <div class="key-item"><div class="pillar"></div> Main Landmarks/Pillars</div>
+            <div class="key-item"><i class="fas fa-mountain"></i> Represents the island land.</div>
         </div>
     </div>
 
     <script>
         const rotations = {
             'MAGMA A': [
-                { form: 'range', pos: 'C', attacks: 0, text: 'Initial spawn.' },
-                { form: 'melee', pos: 'C', attacks: 2, text: 'No prayer. Run immediately after attacks start.' },
-                { form: 'mage', pos: 'C', attacks: 4, text: 'Pray Mage. Run to pillars.' },
-                { form: 'range', pos: 'S', attacks: 5, text: 'Pray Range.' },
-                { form: 'melee', pos: 'C', attacks: 2, text: 'Run near the West pillar.' },
-                { form: 'range', pos: 'CE', attacks: 5, text: 'Pray Range, Run to East.' },
-                { form: 'mage', pos: 'S', attacks: 0, text: 'Safe spot, no prayer.' },
-                { form: 'range', pos: 'C', attacks: 5, text: 'Pray Range, Run West.' },
-                { form: 'jad', type: 'jad', pos: 'CE', attacks: 10, text: 'JAD PHASE! Alternate Range > Mage.' },
-                { form: 'melee', pos: 'C', attacks: 2, text: 'Run to safety.' },
-                { form: 'range', type: 'reset', pos: 'S', attacks: 5, text: 'Pray Range. Back to start next.' }
+                { form: 'range', pos: 'C', playerPos: 'Spawn', attacks: 0, text: 'Initial spawn.' },
+                { form: 'melee', pos: 'C', playerPos: 'Pillar NE', attacks: 2, text: 'No prayer. Run immediately after attacks start.' },
+                { form: 'mage', pos: 'C', playerPos: 'Pillar NW', attacks: 4, text: 'Pray Mage. Run to pillars.' },
+                { form: 'range', pos: 'S', playerPos: 'Pillar SE', attacks: 5, text: 'Pray Range.' },
+                { form: 'melee', pos: 'C', playerPos: 'Pillar SW', attacks: 2, text: 'Run near the West pillar.' },
+                { form: 'range', pos: 'CE', playerPos: 'Pillar NE', attacks: 5, text: 'Pray Range, Run to East.' },
+                { form: 'mage', pos: 'S', playerPos: 'Mid East Safe', attacks: 0, text: 'Safe spot, no prayer.' },
+                { form: 'range', pos: 'C', playerPos: 'Pillar NW', attacks: 5, text: 'Pray Range, Run West.' },
+                { form: 'jad', type: 'jad', pos: 'CE', playerPos: 'Mid NE Edge', attacks: 10, text: 'JAD PHASE! Alternate Range > Mage.' },
+                { form: 'melee', pos: 'C', playerPos: 'Pillar NW', attacks: 2, text: 'Run to safety.' },
+                { form: 'range', type: 'reset', pos: 'S', playerPos: 'Pillar SW', attacks: 5, text: 'Pray Range. Back to start next.' }
             ],
             'MAGMA B': [
-                { form: 'range', pos: 'C', attacks: 0, text: 'Initial spawn.' },
-                { form: 'melee', pos: 'C', attacks: 2, text: 'Run immediately after attacks start.' },
-                { form: 'mage', pos: 'C', attacks: 4, text: 'Pray Mage. Run to pillars.' },
-                { form: 'mage', pos: 'S', attacks: 0, text: 'Safe spot, no prayer.' },
-                { form: 'range', pos: 'S', attacks: 5, text: 'Pray Range.' },
-                { form: 'melee', pos: 'C', attacks: 2, text: 'Run near the East pillar.' },
-                { form: 'range', pos: 'CE', attacks: 5, text: 'Pray Range, Run East.' },
-                { form: 'mage', pos: 'S', attacks: 5, text: 'Pray Mage, Safe spot.' },
-                { form: 'jad', type: 'jad', pos: 'CW', attacks: 10, text: 'JAD PHASE! Alternate Range > Mage.' },
-                { form: 'melee', pos: 'C', attacks: 2, text: 'Run to safety.' },
-                { form: 'range', type: 'reset', pos: 'S', attacks: 5, text: 'Pray Range. Back to start next.' }
+                { form: 'range', pos: 'C', playerPos: 'Spawn', attacks: 0, text: 'Initial spawn.' },
+                { form: 'melee', pos: 'C', playerPos: 'Pillar NW', attacks: 2, text: 'Run immediately after attacks start.' },
+                { form: 'mage', pos: 'C', playerPos: 'Pillar NE', attacks: 4, text: 'Pray Mage. Run to pillars.' },
+                { form: 'mage', pos: 'S', playerPos: 'Mid West Safe', attacks: 0, text: 'Safe spot, no prayer.' },
+                { form: 'range', pos: 'S', playerPos: 'Pillar SE', attacks: 5, text: 'Pray Range.' },
+                { form: 'melee', pos: 'C', playerPos: 'Pillar SW', attacks: 2, text: 'Run near the East pillar.' },
+                { form: 'range', pos: 'CE', playerPos: 'Pillar NE', attacks: 5, text: 'Pray Range, Run East.' },
+                { form: 'mage', pos: 'S', playerPos: 'Mid West Safe', attacks: 5, text: 'Pray Mage, Safe spot.' },
+                { form: 'jad', type: 'jad', pos: 'CW', playerPos: 'Mid NW Edge', attacks: 10, text: 'JAD PHASE! Alternate Range > Mage.' },
+                { form: 'melee', pos: 'C', playerPos: 'Pillar NE', attacks: 2, text: 'Run to safety.' },
+                { form: 'range', type: 'reset', pos: 'S', playerPos: 'Pillar SW', attacks: 5, text: 'Pray Range. Back to start next.' }
             ],
             'SERP': [
-                { form: 'range', pos: 'C', attacks: 0, text: 'Initial spawn.' },
-                { form: 'range', pos: 'NE', attacks: 5, text: 'Pray Range, stand West.' },
-                { form: 'melee', pos: 'CE', attacks: 2, text: 'Run immediately after each attack starts!' },
-                { form: 'range', pos: 'NW', attacks: 5, text: 'Pray Range, stand East.' },
-                { form: 'mage', pos: 'S', attacks: 5, text: 'Pray Mage.' },
-                { form: 'range', pos: 'CW', attacks: 5, text: 'Pray Range.' },
-                { form: 'range', pos: 'S', attacks: 0, text: 'Safe spot.' },
-                { form: 'mage', pos: 'C', attacks: 5, text: 'Pray Mage.' },
-                { form: 'range', pos: 'NE', attacks: 5, text: 'Pray Range, stand West.' },
-                { form: 'jad', type: 'jad', pos: 'NW', attacks: 10, text: 'JAD PHASE! Alternate Mage > Range.' },
-                { form: 'range', type: 'reset', pos: 'S', attacks: 0, text: 'Pray Range.' },
-                { form: 'range', type: 'reset', pos: 'C', attacks: 5, text: 'Back to start.' }
+                { form: 'range', pos: 'C', playerPos: 'Spawn', attacks: 0, text: 'Initial spawn.' },
+                { form: 'range', pos: 'NE', playerPos: 'Mid West Safe', attacks: 5, text: 'Pray Range, stand West.' },
+                { form: 'melee', pos: 'CE', playerPos: 'Pillar NW', attacks: 2, text: 'Run immediately after each attack starts!' },
+                { form: 'range', pos: 'NW', playerPos: 'Mid East Safe', attacks: 5, text: 'Pray Range, stand East.' },
+                { form: 'mage', pos: 'S', playerPos: 'Pillar SE', attacks: 5, text: 'Pray Mage.' },
+                { form: 'range', pos: 'CW', playerPos: 'Pillar SW', attacks: 5, text: 'Pray Range.' },
+                { form: 'range', pos: 'S', playerPos: 'Mid East Safe', attacks: 0, text: 'Safe spot.' },
+                { form: 'mage', pos: 'C', playerPos: 'Pillar NE', attacks: 5, text: 'Pray Mage.' },
+                { form: 'range', pos: 'NE', playerPos: 'Mid West Safe', attacks: 5, text: 'Pray Range, stand West.' },
+                { form: 'jad', type: 'jad', pos: 'NW', playerPos: 'Mid NE Edge', attacks: 10, text: 'JAD PHASE! Alternate Mage > Range.' },
+                { form: 'range', type: 'reset', pos: 'S', playerPos: 'Pillar SE', attacks: 0, text: 'Pray Range.' },
+                { form: 'range', type: 'reset', pos: 'C', playerPos: 'Pillar SE', attacks: 5, text: 'Back to start.' }
             ],
             'TANZ': [
-                { form: 'range', pos: 'C', attacks: 0, text: 'Initial spawn.' },
-                { form: 'mage', pos: 'NW', attacks: 6, text: 'Pray Mage.' },
-                { form: 'range', pos: 'C', attacks: 4, text: 'Pray Range.' },
-                { form: 'mage', pos: 'CE', attacks: 4, text: 'Pray Mage, run East.' },
-                { form: 'range', pos: 'C', attacks: 0, text: 'Safe spot.' },
-                { form: 'mage', pos: 'CE', attacks: 4, text: 'Pray Mage.' },
-                { form: 'range', pos: 'S', attacks: 0, text: 'Pray Range.' },
-                { form: 'range', pos: 'C', attacks: 5, text: 'Pray Range.' },
-                { form: 'range', pos: 'NW', attacks: 5, text: 'Pray Range.' },
-                { form: 'mage', pos: 'S', attacks: 4, text: 'Pray Mage.' },
-                { form: 'jad', type: 'jad', pos: 'NE', attacks: 8, text: 'JAD PHASE! Alternate Range > Mage.' },
-                { form: 'mage', type: 'reset', pos: 'S', attacks: 0, text: 'Pray Mage.' },
-                { form: 'range', type: 'reset', pos: 'C', attacks: 5, text: 'Back to start next.' }
+                { form: 'range', pos: 'C', playerPos: 'Spawn', attacks: 0, text: 'Initial spawn.' },
+                { form: 'mage', pos: 'NW', playerPos: 'Pillar NE', attacks: 6, text: 'Pray Mage.' },
+                { form: 'range', pos: 'C', playerPos: 'Pillar SE', attacks: 4, text: 'Pray Range.' },
+                { form: 'mage', pos: 'CE', playerPos: 'Pillar SE', attacks: 4, text: 'Pray Mage, run East.' },
+                { form: 'range', pos: 'C', playerPos: 'Mid East Safe', attacks: 0, text: 'Safe spot.' },
+                { form: 'mage', pos: 'CE', playerPos: 'Pillar NE', attacks: 4, text: 'Pray Mage.' },
+                { form: 'range', pos: 'S', playerPos: 'Mid West Safe', attacks: 0, text: 'Pray Range.' },
+                { form: 'range', pos: 'C', playerPos: 'Pillar SW', attacks: 5, text: 'Pray Range.' },
+                { form: 'range', pos: 'NW', playerPos: 'Pillar SE', attacks: 5, text: 'Pray Range.' },
+                { form: 'mage', pos: 'S', playerPos: 'Mid East Safe', attacks: 4, text: 'Pray Mage.' },
+                { form: 'jad', type: 'jad', pos: 'NE', playerPos: 'Mid West Safe', attacks: 8, text: 'JAD PHASE! Alternate Range > Mage.' },
+                { form: 'mage', type: 'reset', pos: 'S', playerPos: 'Pillar NE', attacks: 0, text: 'Pray Mage.' },
+                { form: 'range', type: 'reset', pos: 'C', playerPos: 'Pillar SE', attacks: 5, text: 'Back to start next.' }
             ]
         };
 
@@ -295,22 +337,35 @@
         const headerName = document.querySelector('.rot-name');
         const headerStep = document.querySelector('.step-count');
         const zulrahPosMarker = document.getElementById('zulrah-pos');
+        const playerPosMarker = document.getElementById('player-pos');
         const infoPanel = document.getElementById('info-panel');
         const infoIcon = document.getElementById('info-icon');
         const infoTitle = document.getElementById('info-title');
         const infoText = document.getElementById('info-text');
         const attacksNum = document.getElementById('attacks-num');
 
-        const positions = {
-            'N': ['20px', '50%'],
-            'C': ['50%', '50%'],
-            'S': ['auto', '50%', '20px'], 
-            'NE': ['20px', 'auto', 'auto', '20px'], 
-            'NW': ['20px', '20px'], 
-            'CE': ['50%', 'auto', 'auto', '20px'], 
-            'CW': ['50%', '20px'], 
-            'SE': ['auto', 'auto', '20px', '20px'], 
-            'SW': ['auto', '20px', '20px'] 
+        const zulrahPositions = {
+            'N': ['5%', '50%'],
+            'C': ['50%', '50%'], 
+            'S': ['95%', '50%'], 
+            'NE': ['5%', '85%'], 
+            'NW': ['5%', '15%'], 
+            'CE': ['50%', '95%'], 
+            'CW': ['50%', '5%'], 
+            'SE': ['85%', '95%'], 
+            'SW': ['85%', '5%'] 
+        };
+
+        const playerPositions = {
+            'Spawn': ['90%', '50%'],
+            'Pillar NW': ['15%', '15%'], 
+            'Pillar NE': ['15%', '85%'], 
+            'Pillar SW': ['85%', '15%'], 
+            'Pillar SE': ['85%', '85%'],
+            'Mid West Safe': ['50%', '15%'],
+            'Mid East Safe': ['50%', '85%'],
+            'Mid NE Edge': ['25%', '65%'],
+            'Mid NW Edge': ['25%', '35%']
         };
 
         const formIcons = {
@@ -319,14 +374,6 @@
             'melee': '<i class="fas fa-gavel" style="color: var(--color-melee);"></i>',
             'jad': '<i class="fas fa-angry" style="color: #ffb300;"></i>'
         };
-
-        function resetPositionStyles() {
-            zulrahPosMarker.style.top = 'auto';
-            zulrahPosMarker.style.left = 'auto';
-            zulrahPosMarker.style.bottom = 'auto';
-            zulrahPosMarker.style.right = 'auto';
-            zulrahPosMarker.style.transform = 'translate(0, 0)'; 
-        }
 
         function showMainMenu() {
             quizView.style.display = 'none';
@@ -349,24 +396,16 @@
             headerName.innerText = currentRotationName;
             headerStep.innerText = `Step ${currentStepIndex + 1}/${dataArr.length}`;
 
-            resetPositionStyles();
-            const posData = positions[currentStep.pos];
-            
-            if (currentStep.pos === 'C') {
-                zulrahPosMarker.style.top = posData[0];
-                zulrahPosMarker.style.left = posData[1];
-                zulrahPosMarker.style.transform = 'translate(-50%, -50%)';
-            } else if (currentStep.pos === 'N' || currentStep.pos === 'S') {
-                 zulrahPosMarker.style.left = '50%';
-                 zulrahPosMarker.style.transform = 'translateX(-50%)';
-                 if(currentStep.pos === 'N') zulrahPosMarker.style.top = posData[0];
-                 if(currentStep.pos === 'S') zulrahPosMarker.style.bottom = posData[2];
-            } else {
-                 // FIX: Added bulletproof fallback for Safari styles
-                 zulrahPosMarker.style.top = posData[0] || 'auto';
-                 zulrahPosMarker.style.left = posData[1] || 'auto';
-                 zulrahPosMarker.style.bottom = posData[2] || 'auto';
-                 zulrahPosMarker.style.right = posData[3] || 'auto';
+            const zCoord = zulrahPositions[currentStep.pos];
+            if (zCoord) {
+                zulrahPosMarker.style.top = zCoord[0];
+                zulrahPosMarker.style.left = zCoord[1];
+            }
+
+            const pCoord = playerPositions[currentStep.playerPos];
+            if (pCoord) {
+                playerPosMarker.style.top = pCoord[0];
+                playerPosMarker.style.left = pCoord[1];
             }
 
             attacksNum.innerText = currentStep.attacks;
@@ -393,4 +432,16 @@
         }
 
         function nextStep() {
-            currentStep
+            currentStepIndex++;
+            if (currentStepIndex >= rotations[currentRotationName].length) {
+                currentStepIndex = 0; 
+            }
+            populateCard();
+        }
+
+        function toggleKey() {
+            keyModal.style.display = keyModal.style.display === 'block' ? 'none' : 'block';
+        }
+    </script>
+</body>
+</html>
